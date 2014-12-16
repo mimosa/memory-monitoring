@@ -16,10 +16,11 @@ module MemoryMonitoring
         @start_rss = current_memory
          @start_at = Time.now 
       end
-      # 获取输出内容
-      status, headers, response = @app.call(env)
     rescue => e # 出错了
       @level = :error
+    else
+      # 获取输出内容
+      status, headers, response = @app.call(env)
     ensure
       unless messages.empty?
         logger.send @level, (@messages + [ request_uri ]).join("\t")
