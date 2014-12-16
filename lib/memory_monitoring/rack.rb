@@ -1,4 +1,6 @@
 # coding: utf-8
+require 'logger' unless defined?(::Logger)
+require 'json' unless defined?(::JSON)
 
 module MemoryMonitoring
   class Rack # 中间件 Middleware
@@ -17,16 +19,31 @@ module MemoryMonitoring
          @start_at = Time.now 
       end
       # 获取输出内容
-      status||200, headers||{}, response||[] = @app.call(env)
-    rescue => e # 出错了
-      @level = :error
+      status, headers, response = @app.call(env)
+    # rescue => e # 出错了
+    #   @level = :error
     ensure
       unless messages.empty?
         logger.send @level, (@messages + [ request_uri ]).join("\t")
-        if @level != :error && status.to_i.between?(200, 399) && env['HTTP_ACCEPT'].include?('text/html') 
+        if @level != :error && status.to_i.between?(200, 399)
           body = response.try(:body) || response[0]
           unless body.nil?
-            body = "<!-- #{ @messages.join(', ') } -->\n" +  body
+            case env['HTTP_ACCEPT']
+            when /text\/html/
+              body = "<!-- #{ @messages.join(', ') } -->\n" +  body
+            when /application\/json/
+              body = ::JSON.load(body)
+              @messages = @messages.map { |m| m.split(': ') }.flatten
+              body[:debug] = Hash[*@messages]
+              body = ::JSON.dump(body)
+            when /text\/javascript/
+              body = "console.log('#{@messages.join(', ')}');\n" +  body
+            else
+              puts env['HTTP_ACCEPT']
+              puts '_'*88
+              puts body
+              puts '_'*88
+            end
             return [status, headers, [body]]
           end
         end
@@ -63,7 +80,7 @@ module MemoryMonitoring
       end
 
       def logger
-        @logger ||= Logger.new './log/memory.log', 'daily'
+        @logger ||= ::Logger.new './log/memory.log', 'daily'
       end
   end
 end
