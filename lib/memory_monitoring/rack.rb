@@ -28,7 +28,7 @@ module MemoryMonitoring
         unless response.nil?
           body = response.respond_to?(:body) ? response.body : response.first
           case env['HTTP_ACCEPT']
-          when /text\/html/
+          when /text\/html/, '*/*'
             body = "<!-- #{ @messages.join(', ') } -->\n" +  body
           when /application\/json/
             body = ::JSON.load(body)
