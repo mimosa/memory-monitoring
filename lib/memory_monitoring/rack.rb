@@ -20,32 +20,30 @@ module MemoryMonitoring
       end
       # 获取输出内容
       status, headers, response = @app.call(env)
-    # rescue => e # 出错了
-    #   @level = :error
+    # rescue => e # 出错了  
     ensure
       unless messages.empty?
+        @level = :error if status.nil? || status.between?(400, 600)
         logger.send @level, (@messages + [ request_uri ]).join("\t")
-        if @level != :error && status.to_i.between?(200, 399)
-          body = response.try(:body) || response[0]
-          unless body.nil?
-            case env['HTTP_ACCEPT']
-            when /text\/html/
-              body = "<!-- #{ @messages.join(', ') } -->\n" +  body
-            when /application\/json/
-              body = ::JSON.load(body)
-              @messages = @messages.map { |m| m.split(': ') }.flatten
-              body[:debug] = Hash[*@messages]
-              body = ::JSON.dump(body)
-            when /text\/javascript/
-              body = "console.log('#{@messages.join(', ')}');\n" +  body
-            else
-              puts env['HTTP_ACCEPT']
-              puts '_'*88
-              puts body
-              puts '_'*88
-            end
-            return [status, headers, [body]]
+        unless response.nil?
+          body = response.respond_to?(:body) ? response.body : response.first
+          case env['HTTP_ACCEPT']
+          when /text\/html/
+            body = "<!-- #{ @messages.join(', ') } -->\n" +  body
+          when /application\/json/
+            body = ::JSON.load(body)
+            @messages = @messages.map { |m| m.split(': ') }.flatten
+            body[:debug] = Hash[*@messages]
+            body = ::JSON.dump(body)
+          when /text\/javascript/
+            body = "console.log('#{@messages.join(', ')}');\n" +  body
+          else
+            puts env['HTTP_ACCEPT']
+            puts '_'*88
+            puts body
+            puts '_'*88
           end
+          return [status, headers, [body]]
         end
       end
     end
