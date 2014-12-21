@@ -1,6 +1,5 @@
 # coding: utf-8
 require 'logger' unless defined?(::Logger)
-require 'json' unless defined?(::JSON)
 
 module MemoryMonitoring
   class Rack # 中间件 Middleware
@@ -26,24 +25,9 @@ module MemoryMonitoring
         @level = :error if status.nil? || status.between?(400, 600)
         logger.send @level, (@messages + [ request_uri ]).join("\t")
         unless response.nil?
-          body = response.respond_to?(:body) ? response.body : response.first
-          case env['HTTP_ACCEPT']
-          when /text\/html/, '*/*'
-            body = "<!-- #{ @messages.join(', ') } -->\n" +  body
-          when /application\/json/
-            body = ::JSON.load(body)
-            @messages = @messages.map { |m| m.split(': ') }.flatten
-            body[:debug] = Hash[*@messages]
-            body = ::JSON.dump(body)
-          when /text\/javascript/
-            body = "console.log('#{@messages.join(', ')}');\n" +  body
-          else
-            puts env['HTTP_ACCEPT']
-            puts '_'*88
-            puts body
-            puts '_'*88
-          end
-          return [status, headers, [body]]
+          body = (response.respond_to?(:body) ? response.body : response).first
+          injector = Injector.new(@messages)
+          return [status, headers, [injector.injection(env['HTTP_ACCEPT'], body)]]
         end
       end
     end
