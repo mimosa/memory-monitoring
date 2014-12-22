@@ -1,6 +1,7 @@
 # MemoryMonitoring Middleware
 
 `MemoryMonitoring::Rack` provides support for Memory monitor for Rack compatible web applications.
+[![Gem Version](https://badge.fury.io/rb/memory-monitoring.png)](http://badge.fury.io/rb/memory-monitoring)  [![Dependency Status](https://gemnasium.com/mimosa/memory-monitoring.png?travis)](https://gemnasium.com/mimosa/memory-monitoring) [![Code Climate](https://codeclimate.com/github/mimosa/memory-monitoring.png)](https://codeclimate.com/github/mimosa/memory-monitoring)
 
 ## Installation
 
