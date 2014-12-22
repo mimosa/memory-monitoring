@@ -13,7 +13,7 @@ module MemoryMonitoring
       request_uri = env['HTTP_HOST'] + env['PATH_INFO']
       @messages = []
       # 除静态文件外，读取当前内存
-      unless request_uri =~ /\/(assets|uploads|images|fonts|js|css)|.(js|css|png|gif|jpg|jpeg|woff|txt|ico|eot|map|svg|ttf)/
+      unless ignore?(request_uri)
         @start_rss = current_memory
          @start_at = Time.now 
       end
@@ -27,13 +27,18 @@ module MemoryMonitoring
         unless response.nil?
           body = (response.respond_to?(:body) ? response.body : response).first
           injector = Injector.new(@messages)
-          return [status, headers, [injector.injection(env['HTTP_ACCEPT'], body)]]
+          body = injector.injection(env['HTTP_ACCEPT'], body) # 新內容，注入後
+          headers['Content-Length'] = "#{body.bytesize}"
+          return [status, headers, [body]]
         end
       end
     end
 
     private
-
+      def ignore?(uri)
+        uri =~ /\/(assets|uploads|images|fonts|js|css)|.(js|css|png|gif|jpg|jpeg|woff|txt|ico|eot|map|svg|ttf)/
+      end
+      
       def messages
         if @start_rss > 0
           @ended_rss = current_memory
